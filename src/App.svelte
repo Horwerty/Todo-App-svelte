@@ -1,28 +1,13 @@
 <script>
+	import { onMount } from "svelte";
+	import { fly} from 'svelte/transition' 
 	let newTodo = '';
 	let tempId = 4
 	// let yes = false;
+	let currentFilter = 'all';
+	let quoteZone;
 
-	let todos = [
-		{
-			id: 1,
-			completed: false,
-			title: newTodo,
-			editing:false
-		},
-		// {
-		// 	id: 2,
-		// 	completed: false,
-		// 	title: 'Pen',
-		// 	editing:false
-		// },
-		// {
-		// 	id: 3,
-		// 	completed: false,
-		// 	title: 'Paper',
-		// 	editing:false
-		// },
-	]
+	let todos = []
 
 		function addTodo(){
 			todos.push({
@@ -31,10 +16,31 @@
 				title: newTodo,
 				editing:false
 			})
+			
 			todos = todos;
 			tempId = tempId + 1
 			newTodo = '';
 		}
+
+		function empTee(){
+			alert("Kindly input your to do")
+		}
+
+		function updateFilter(filter){
+			currentFilter = filter;
+
+		}
+
+		function editTodo(todo){
+			todo.editing = true;
+			todos = todos
+		}
+
+		function doneEditing(todo){
+			todo.editing = false;
+			todos = todos
+		}
+
 
 		function deleteTodo(id){
 			todos = todos.filter(todo => todo.id !== id)
@@ -50,22 +56,46 @@
 			todos = todos
 		}
 
+		onMount(async() => {
+			const res = await fetch('https://api.kanye.rest')
+			const response = await res.json();
+			quoteZone= response.quote;
+		})
+
+		
 		$: todoRemainings = todos.filter(todo => !todo.completed).length
+
+		$: filteredTodos = currentFilter === 'all'
+		 ? todos
+		 : currentFilter === 'completed'
+		   ? todos.filter(todo => todo.completed)
+		   : todos.filter(todo => !todo.completed);
 </script>
 
 <main>
 		<div>
-			<h3>TO DO APP</h3>
+			<h2>TO DO APP</h2>
 			<div class="inputZone">
-				<input type="text" bind:value={newTodo} class="todo-input" >
-				<button on:click={addTodo}>Add</button>
+				<input type="search" bind:value={newTodo} class="todo-input" >
+				{#if newTodo == ""}
+						<button on:click={empTee} class="addBtn">Add</button>
+				{:else}
+				<button on:click={addTodo} class="addBtn">Add</button>
+				{/if}
 			</div>
 		</div>
-		{#each todos as todo}
+		{#each filteredTodos as todo}
 			<div class="todo-item">
-				<div class="todo-item-left">
+				<div class="todo-item-left" transition:fly={{y:20, duration: 300}}>
 					<input type="checkbox" bind:checked={todo.completed} >
-					<div class="todo-item-label" class:completed={todo.completed}>{todo.title}</div>
+					{#if !todo.editing}
+						<!-- svelte-ignore a11y-no-static-element-interactions -->
+						<div class="todo-item-label" class:completed={todo.completed}
+						on:dblclick={() => editTodo(todo)}>{todo.title}</div>
+					{:else}
+						<!-- svelte-ignore a11y-autofocus -->
+						<input type="text" class="todo-item-edit" bind:value={todo.title} on:blur={() => doneEditing(todo)}>
+					{/if}	
 				</div>
 				<div class="remove-item" >
 					<!-- <button on:click={() => deleteTodo(todo.id )}>&times;</button> -->
@@ -76,30 +106,62 @@
 		
 		<div class="extra-container">
 			<div><label><input type="checkbox" on:click={checkAllTodos}>Check All</label></div>
-			<div>{todoRemainings} item(s) left</div>
+			<div class="counterTxt">{todoRemainings} item(s) left</div>
 		</div>
 		<div class="extra-container">
-			<div>
-				<button >All</button>
-				<button>Active</button>
-				<button>Completed</button>
+			<div class="filterBtn">
+				<button on:click={() => updateFilter('all')} class:active={currentFilter=== 'all'}>All</button>
+				<button on:click={() => updateFilter('active')} class:active={currentFilter=== 'active'}>Active</button>
+				<button on:click={() => updateFilter('completed')} class:active={currentFilter=== 'completed'}>Completed</button>
 			</div>
 			<div>
-				<button on:click={clearCompleted}>Clear Completed</button>
+				<button on:click={clearCompleted} class="clrBtn">Clear Completed</button>
 			</div>
 		</div>
+		<p class="quotZee">{quoteZone}</p>
 </main>
 
 <style>
 	main {
 		text-align: center;
 		padding: 1em;
-		max-width: 240px;
+		width: 480px;
 		margin: 0 auto;
+		border: 2px black solid;
+		background-color: gray;
+	}
+
+	h2{
+		font-weight: bold;
+		color: #fff;
+	}
+
+	.counterTxt{
+		font-weight: bold;
+		color: #fff;
 	}
 
 	.inputZone{
 		display: flex;
+		justify-content: space-between;
+	}
+
+	.quotZee{
+		color: #fff;
+		font-weight: bold;
+	}
+
+	.todo-item{
+		font-weight: 600;
+		color: #fff;
+	}
+	.remove-item button{
+		width: 2.5rem;
+		height: 2rem;
+		background-color: orangered;
+		font-weight: bold;
+		border: none;
+		cursor: pointer;
 	}
 
 	/* h1 {
@@ -116,6 +178,36 @@
 		margin-bottom: 16px;
 	}
 
+	.addBtn{
+		width: 4.5rem;
+		border-radius: 5px;
+		border: none;
+		height: 3rem;
+		font-weight: bold;
+		cursor: pointer;
+	}
+
+	.addBtn:hover {
+		background-color: green;
+		color: #fff;
+	}
+
+	
+
+	.clrBtn{
+		width: 9rem;
+		border-radius: 5px;
+		border: none;
+		height: 2.8rem;
+		font-weight: bold;
+		cursor: pointer;
+	}
+
+	.clrBtn:hover {
+		background-color: orangered;
+		color: #fff;
+	}
+
 	.todo-item{
 		display: flex;
 		margin-bottom: 12px;
@@ -123,9 +215,27 @@
 		justify-content: space-between;
 	}
 
+	.active {
+		
+		cursor: pointer;
+	}
+
+	.active:hover{
+		background-color: brown;
+	}
+
 	.todo-item-left, .extra-container{
 		display: flex;
 		justify-content: space-between;
+	}
+
+	.filterBtn button{
+		width: 5.9rem;
+		border-radius: 5px;
+		border: none;
+		height: 2.8rem;
+		font-weight: bold;
+		cursor: pointer;
 	}
 
 	.todo-item-label{
